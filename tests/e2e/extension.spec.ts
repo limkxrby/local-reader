@@ -1,5 +1,6 @@
 import { test, expect, chromium } from '@playwright/test';
 import { resolve, join } from 'node:path';
+import { tmpdir } from 'node:os';
 import { readFile } from 'node:fs/promises';
 
 test('reads offline, searches, restores a backup, and imports Pocket bookmarks', async ({}, testInfo) => {
@@ -20,7 +21,7 @@ test('reads offline, searches, restores a backup, and imports Pocket bookmarks',
   await writeFile(resolve(testExtension, 'manifest.json'), JSON.stringify(manifest));
   // Chromium's IndexedDB filenames can exceed Windows path limits when the
   // persistent profile lives inside a long test-results directory.
-  const profilePrefix = join('C:/Users/ako/Documents/Codex', 'local-reader-test-');
+  const profilePrefix = join(process.platform === 'win32' ? 'C:/Users/ako/Documents/Codex' : tmpdir(), 'local-reader-test-');
   const profile = await mkdtemp(profilePrefix);
   const context = await chromium.launchPersistentContext(profile, {
     channel: 'chromium', headless: true,
