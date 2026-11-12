@@ -4,6 +4,7 @@ import { importBookmarks, listArticles, restoreArticles } from './storage';
 import { makeBackup, parseBackup, type Article } from './model';
 import { parsePocketCsv, type PocketImport } from './pocket';
 import { sanitizeContent } from './sanitize';
+import { Downloads } from './Downloads';
 import './library.css';
 import './pocket.css';
 
@@ -134,7 +135,7 @@ function App() {
         {active ? <>
           <button className="back" onClick={() => openArticle('')}>← Back to library</button>
           <article className="reader">
-            <p className="eyebrow">{new URL(active.url).hostname} · SAVED FOR OFFLINE READING</p>
+            <p className="eyebrow">{new URL(active.url).hostname} · {active.text ? 'SAVED FOR OFFLINE READING' : 'IMPORTED BOOKMARK'}</p>
             <h1>{active.title}</h1>
             <p className="byline">{active.byline || (active.source === 'pocket' ? 'Imported Pocket bookmark' : 'Saved article')}{active.text ? ` · ${Math.max(1, Math.ceil(active.text.split(/\s+/).length / 220))} min read` : ''}</p>
             {active.text ? <div className="reader-content" dangerouslySetInnerHTML={{ __html: content }} /> : <div className="bookmark-empty"><span aria-hidden="true">↗</span><h2>This is a bookmark, not an offline copy.</h2><p>Local Reader kept the link and its Pocket details. Open the original page when you want to read it.</p></div>}
@@ -143,6 +144,7 @@ function App() {
         </> : <>
           <div className="library-heading"><div><p className="eyebrow">A LITTLE LESS NOISE</p><h1>Your library<span>.</span></h1><p>Something worth reading. Whenever you're ready.</p></div><span className="count">{articles.length} saved</span></div>
           <label className="search"><span aria-hidden="true">⌕</span><input type="search" placeholder="Search titles, authors, or article text" aria-label="Search library" value={query} onChange={event => setQuery(event.target.value)} /></label>
+          <Downloads articles={articles} refresh={refresh} />
           <div className="list-heading"><span>{query ? 'SEARCH RESULTS' : 'SAVED ARTICLES'}</span><span>NEWEST FIRST</span></div>
           {loading ? <p role="status">Opening your library…</p> : filtered.length ? <div className="article-list">{filtered.map((article, index) => <button className="article-card" key={article.url} onClick={() => openArticle(article.url)}>
             <span className="article-number">{String(index + 1).padStart(2, '0')}</span>

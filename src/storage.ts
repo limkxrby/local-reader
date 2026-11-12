@@ -7,8 +7,22 @@ const db = () => openDB('local-reader', 1, {
 
 export async function listArticles(): Promise<Article[]> {
   const database = await db();
-  try { return (await database.getAll('articles')).sort((a, b) => b.savedAt - a.savedAt); }
+  try { return (await database.getAll('articles')).map(validateArticle).sort((a, b) => b.savedAt - a.savedAt); }
   finally { database.close(); }
+}
+
+// Re-read inside the write transaction so a completed capture in another tab wins.
+export async function saveDownloadedContent(url: string, value: Article): Promise<void> {
+  const extracted = validateArticle(value);
+  const database = await db();
+  try {
+    const tx = database.transaction('articles', 'readwrite');
+    const current = await tx.store.get(url);
+    if (current && !current.text) {
+      await tx.store.put(validateArticle({ ...current, content: extracted.content, text: extracted.text, byline: extracted.byline }));
+    }
+    await tx.done;
+  } finally { database.close(); }
 }
 
 export async function saveArticle(value: ArticleInput): Promise<void> {

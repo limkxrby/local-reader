@@ -2,7 +2,7 @@
 
 A local-first read-later browser extension. Save article text to an offline library with no account, backend, analytics, or subscriptions.
 
-**Status: working starter, not a store-ready release.** Chrome/Edge Manifest V3, TypeScript, React, Mozilla Readability, DOMPurify, and IndexedDB. Images, video, PDFs, highlights, and page downloading for imported links are not implemented yet.
+**Status: working starter, not a store-ready release.** Chrome/Edge Manifest V3, TypeScript, React, Mozilla Readability, DOMPurify, and IndexedDB. Images, video, PDFs, and highlights are not implemented yet.
 
 ## Start in the cloud
 
@@ -35,12 +35,19 @@ Restricted browser pages, browser stores, PDFs, and some complex sites cannot be
 - Local library and full-text substring search (all entered words must match).
 - Versioned JSON backup export and atomic restore. Restore skips URLs already present. Files up to 50 MB / 10,000 articles are accepted.
 - Pocket CSV import with a preview, quoted-field support, tags, archived status, and favorites. Repeated, invalid, and already-saved URLs are skipped. Imports create bookmarks only; they do not download or contact the linked pages.
+- Explicit offline downloads for up to 50 pending bookmarks per batch, with progress, cancellation, individual failure reasons, and retry. Downloaded text preserves imported titles, dates, tags, favorites, and archive state.
 - Responsive, keyboard-accessible library and reader.
 - Codespaces development configuration and GitHub Actions checks with a downloadable extension build.
 
 ## Privacy and durability
 
-Only `activeTab`, `scripting`, and `contextMenus` are requested. There are no persistent host permissions, background crawling, telemetry, remote fonts, or remote code. IndexedDB does not require the `storage` permission. Capturing a page is initiated by the user, and sanitization strips forms, scripts, images, iframes, inline styles, and resource-loading attributes. Extension pages also block network connections and images with a Content Security Policy.
+Only `activeTab`, `scripting`, and `contextMenus` are required. Batch downloads declare optional HTTP/HTTPS host access and request only the sites in the selected batch, directly from the download button. Browser-granted site permissions persist until revoked in extension settings. There is no background crawling, telemetry, remote fonts, or remote code. IndexedDB does not require the `storage` permission. Capturing a page is initiated by the user, and sanitization strips forms, scripts, images, iframes, inline styles, and resource-loading attributes. CSP blocks images and frames; HTTP/HTTPS connections are allowed for explicit downloads.
+
+## Download imported bookmarks
+
+Open the library and choose **Download next … bookmarks**, then accept or decline the browser's site-access prompt. The next 50 bookmarks without text are processed sequentially; each page has a 20-second timeout and a 5 MB response limit. Successful copies are saved immediately. Cancel stops the active request and leaves unfinished bookmarks available for a later batch. Keep this tab open: closing or reloading it ends the batch. Failed items can be retried while the batch panel remains open; after reopening the library they are still pending bookmarks.
+
+Downloads omit cookies and referrers, reject redirects, and parse HTML without running publisher scripts. Sites needing sign-in, redirects, JavaScript rendering, or anti-bot challenges may fail; open those pages normally and save with the toolbar. Images and video are excluded. No server or account is involved in extraction.
 
 Saved data stays in this browser profile. **Uninstalling the extension or deleting the profile can erase it. Export backups regularly.** Storage quotas and disk availability still apply; local does not mean encrypted at rest. JSON backups contain plaintext article content and URLs. Restore sanitizes content again before saving. The reader sanitizes on display too. Pocket CSV files are read in the extension and are not uploaded anywhere.
 
@@ -53,11 +60,11 @@ npx playwright install chromium
 npm run test:e2e
 ```
 
-On a fresh Linux environment use `npx playwright install --with-deps chromium`. The browser test verifies IndexedDB persistence, offline reload, search, backup restore, Pocket import preview and commit, duplicate handling, and absence of reader network requests. Unit tests cover extraction, sanitization, backups, CSV parsing, and atomic local writes. The distributed manifest has no host permissions. Manual toolbar/context-menu testing in Chrome and Edge is still required before release.
+On a fresh Linux environment use `npx playwright install --with-deps chromium`. The browser test verifies IndexedDB persistence, offline reload, search, backup restore, Pocket import, batch download failure/retry, and offline reading after downloading. Unit tests cover extraction, sanitization, backups, CSV parsing, bounded downloads, cancellation, metadata preservation, and local writes. The test build grants access to one fixture domain; native permission prompt acceptance/denial and toolbar/context-menu testing in Chrome and Edge remain manual release checks. The distributed manifest has no required host permissions.
 
 ## Next milestones
 
-1. Download imported pages in an explicit, user-started batch with progress, failures, and retry controls.
+1. Improve download compatibility with carefully scoped redirect handling and additional real-site extraction fixtures.
 2. Omnivore export adapters, validated against actual export formats.
 3. Highlights, notes, read/archive state, and article management.
 4. Optional image downloads with explicit permissions and storage limits.
