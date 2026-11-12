@@ -30,7 +30,7 @@ describe('privacy and extraction', () => {
 
 describe('durable local data and backups', () => {
   it('round-trips complete article contents and rejects malformed backups', () => {
-    expect(parseBackup(makeBackup([article]))).toEqual([{ ...article, tags: [], state: 'unread', favorite: false, source: 'saved' }]);
+    expect(parseBackup(makeBackup([article]))).toEqual([{ ...article, tags: [], state: 'unread', favorite: false, source: 'saved', notes: '', annotations: [], deleted: false }]);
     expect(() => parseBackup('{"format":"other","articles":[]}')).toThrow();
     expect(() => parseBackup(makeBackup([{ ...article, savedAt: NaN }]))).toThrow();
     expect(() => validateArticle({ ...article, content: 2 })).toThrow();

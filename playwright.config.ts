@@ -1,2 +1,2 @@
 import { defineConfig } from '@playwright/test';
-export default defineConfig({ testDir: './tests/e2e', timeout: 60_000, workers: 1, reporter: 'list' });
+export default defineConfig({ testDir: './tests/e2e', timeout: 60_000, workers: 1, reporter: 'list', use: { actionTimeout: 10000, trace: 'retain-on-failure' } });

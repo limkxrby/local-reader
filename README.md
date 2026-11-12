@@ -2,7 +2,7 @@
 
 A local-first read-later browser extension. Save article text to an offline library with no account, backend, analytics, or subscriptions.
 
-**Status: working starter, not a store-ready release.** Chrome/Edge Manifest V3, TypeScript, React, Mozilla Readability, DOMPurify, and IndexedDB. Images, video, PDFs, and highlights are not implemented yet.
+**Status: MVP 1.0.0 implemented, packaged for testing.** Chrome/Edge Manifest V3, TypeScript, React, Mozilla Readability, DOMPurify, and IndexedDB. Public store submission and native Chrome/Edge release checks remain publisher tasks; see [RELEASE.md](RELEASE.md).
 
 ## Start in the cloud
 
@@ -33,11 +33,23 @@ Restricted browser pages, browser stores, PDFs, and some complex sites cannot be
 - Readability extraction, strict HTML sanitization, and text-only offline reading.
 - URL-based duplicate handling: saving the same URL updates its saved content. Fragments are ignored; query strings are retained.
 - Local library and full-text substring search (all entered words must match).
+- Read/unread/archive controls, favorites, tag editing, sorting, and filters. Move items to recoverable Trash and restore them there.
+- Selected-text highlights with quote context, editable highlight notes, and article notes. Search includes notes, tags and quoted text. Highlights that cannot be uniquely matched remain in the notes panel.
+- Omnivore import from an extracted export folder: metadata JSON, sanitized offline HTML, and highlight Markdown retained as searchable article notes. PDF content remains a bookmark. No network access during import.
 - Versioned JSON backup export and atomic restore. Restore skips URLs already present. Files up to 50 MB / 10,000 articles are accepted.
 - Pocket CSV import with a preview, quoted-field support, tags, archived status, and favorites. Repeated, invalid, and already-saved URLs are skipped. Imports create bookmarks only; they do not download or contact the linked pages.
 - Explicit offline downloads for up to 50 pending bookmarks per batch, with progress, cancellation, individual failure reasons, and retry. Downloaded text preserves imported titles, dates, tags, favorites, and archive state.
 - Responsive, keyboard-accessible library and reader.
 - Codespaces development configuration and GitHub Actions checks with a downloadable extension build.
+- Full JSON backups include notes, annotations, reading state and trash. Version 1 and 2 backups still restore; new exports use version 3.
+
+## Organize and annotate
+
+Open an article to edit tags, favorite it, mark it read/unread, archive it, or move it to Trash. Use the library's Show, Tag and Sort controls to find items. Trash is recoverable and included in backups; this version does not permanently purge individual articles.
+
+Select a passage inside the reader and choose **Save selected highlight**. Add notes to that highlight or to the article, then explicitly save. Highlights retain the quote plus surrounding text; if recapture changes the article, unmatched quotes are kept rather than silently attached to a different passage.
+
+For Omnivore, unzip the original export first and choose **Import Omnivore folder**. The importer follows the metadata/content/highlights layout from the [official export implementation](https://github.com/omnivore-app/omnivore/blob/main/packages/api/src/jobs/export.ts). Review the preview before committing. Exports up to 50 MB and 10,000 items are supported. Missing HTML and PDFs remain bookmarks; the original highlight Markdown appears in Article notes.
 
 ## Privacy and durability
 
@@ -64,11 +76,6 @@ On a fresh Linux environment use `npx playwright install --with-deps chromium`. 
 
 ## Next milestones
 
-1. Improve download compatibility with carefully scoped redirect handling and additional real-site extraction fixtures.
-2. Omnivore export adapters, validated against actual export formats.
-3. Highlights, notes, read/archive state, and article management.
-4. Optional image downloads with explicit permissions and storage limits.
-5. Accessibility and extraction testing across real sites, store icons, privacy listing, and release packaging.
-6. Optional encrypted sync, after the local core is reliable.
+The core MVP is implemented. Future enhancements are optional offline images, carefully scoped redirects, direct ZIP import, PDFs, larger-library search indexing, and encrypted sync. Compatibility with every publisher is not guaranteed; signed-in and script-rendered pages work best with toolbar capture. Before store publication, complete the native permission, Chrome/Edge, real-site and publisher checks in [RELEASE.md](RELEASE.md). Privacy disclosures are in [PRIVACY.md](PRIVACY.md) and the extension's Privacy & data page.
 
 Dependencies retain their respective licenses. No project license has been selected yet.

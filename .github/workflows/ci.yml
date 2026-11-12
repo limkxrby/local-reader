@@ -26,6 +26,13 @@ jobs:
           path: dist/
           if-no-files-found: error
       - uses: actions/upload-artifact@v4
+        with:
+          name: local-reader-release-materials
+          path: |
+            RELEASE.md
+            PRIVACY.md
+            test-results/**/store-*.png
+      - uses: actions/upload-artifact@v4
         if: failure()
         with:
           name: test-results

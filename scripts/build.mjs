@@ -1,6 +1,7 @@
 import { build, context } from 'esbuild-wasm';
 import { cp, mkdir, rm } from 'node:fs/promises';
 import { resolve } from 'node:path';
+import './assets.mjs';
 
 const outdir = resolve('dist');
 if (outdir !== resolve(process.cwd(), 'dist')) throw new Error('Unexpected output directory');

@@ -18,7 +18,7 @@ export async function saveDownloadedContent(url: string, value: Article): Promis
   try {
     const tx = database.transaction('articles', 'readwrite');
     const current = await tx.store.get(url);
-    if (current && !current.text) {
+    if (current && !current.text && !current.deleted) {
       await tx.store.put(validateArticle({ ...current, content: extracted.content, text: extracted.text, byline: extracted.byline }));
     }
     await tx.done;
@@ -28,8 +28,26 @@ export async function saveDownloadedContent(url: string, value: Article): Promis
 export async function saveArticle(value: ArticleInput): Promise<void> {
   const article = validateArticle(value);
   const database = await db();
-  try { await database.put('articles', article); }
+  try {
+    const tx = database.transaction('articles', 'readwrite');
+    const current = await tx.store.get(article.url);
+    await tx.store.put(current ? validateArticle({ ...article, tags: current.tags, state: current.state, favorite: current.favorite, source: current.source, savedAt: current.savedAt, notes: current.notes, annotations: current.annotations, deleted: false }) : article);
+    await tx.done;
+  }
   finally { database.close(); }
+}
+
+export async function updateArticle(url: string, change: (current: Article) => Article): Promise<void> {
+  const database = await db();
+  try {
+    const tx = database.transaction('articles', 'readwrite');
+    const current = await tx.store.get(url);
+    if (!current) throw new Error('Article no longer exists.');
+    const updated = validateArticle(change(validateArticle(current)));
+    if (updated.url !== url) throw new Error('Article URL cannot change.');
+    await tx.store.put(updated);
+    await tx.done;
+  } finally { database.close(); }
 }
 
 // One transaction: a failed restore cannot leave a partially imported library.

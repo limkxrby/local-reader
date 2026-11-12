@@ -1,3 +1,7 @@
+export interface Annotation {
+  id: string; quote: string; prefix: string; suffix: string; note: string; createdAt: number;
+}
+
 export interface Article {
   url: string;
   title: string;
@@ -6,12 +10,15 @@ export interface Article {
   text: string;
   savedAt: number;
   tags: string[];
-  state: 'unread' | 'archived';
+  state: 'unread' | 'read' | 'archived';
   favorite: boolean;
-  source: 'saved' | 'pocket';
+  source: 'saved' | 'pocket' | 'omnivore';
+  notes: string;
+  annotations: Annotation[];
+  deleted: boolean;
 }
 
-export type ArticleInput = Omit<Article, 'tags' | 'state' | 'favorite' | 'source'> & Partial<Pick<Article, 'tags' | 'state' | 'favorite' | 'source'>>;
+export type ArticleInput = Omit<Article, 'tags' | 'state' | 'favorite' | 'source' | 'notes' | 'annotations' | 'deleted'> & Partial<Pick<Article, 'tags' | 'state' | 'favorite' | 'source' | 'notes' | 'annotations' | 'deleted'>>;
 
 export function normalizeUrl(value: string): string {
   const url = new URL(value);
@@ -37,25 +44,35 @@ export function validateArticle(value: unknown): Article {
   const tags = a.tags === undefined ? [] : a.tags;
   if (!Array.isArray(tags) || tags.length > 50 || tags.some(tag => typeof tag !== 'string' || !tag.trim() || tag.length > 200)) throw new Error('Invalid article tags.');
   const state = a.state === undefined ? 'unread' : a.state;
-  if (state !== 'unread' && state !== 'archived') throw new Error('Invalid article state.');
+  if (!['unread', 'read', 'archived'].includes(String(state))) throw new Error('Invalid article state.');
   const favorite = a.favorite === undefined ? false : a.favorite;
   if (typeof favorite !== 'boolean') throw new Error('Invalid favorite state.');
   const source = a.source === undefined ? 'saved' : a.source;
-  if (source !== 'saved' && source !== 'pocket') throw new Error('Invalid article source.');
+  if (source !== 'saved' && source !== 'pocket' && source !== 'omnivore') throw new Error('Invalid article source.');
+  const notes = a.notes ?? '';
+  const annotations = a.annotations ?? [];
+  const deleted = a.deleted ?? false;
+  if (typeof notes !== 'string' || notes.length > 100_000 || typeof deleted !== 'boolean' || !Array.isArray(annotations) || annotations.length > 1000) throw new Error('Invalid notes or annotations.');
+  const ids = new Set<string>();
+  for (const h of annotations) {
+    if (!h || ['id', 'quote', 'prefix', 'suffix', 'note'].some(key => typeof h[key] !== 'string') || !h.id || !h.quote.trim() || h.quote.length > 12000 || h.note.length > 10000 || h.prefix.length > 200 || h.suffix.length > 200 || !Number.isFinite(h.createdAt) || ids.has(h.id)) throw new Error('Invalid highlight.');
+    ids.add(h.id);
+  }
   if (source === 'saved' && (!(a.content as string) || !(a.text as string))) throw new Error('Article content or save date is missing.');
   return { url: normalizeUrl(a.url as string), title: a.title as string, byline: a.byline as string,
     content: a.content as string, text: a.text as string, savedAt: a.savedAt,
-    tags: [...new Set(tags.map(tag => tag.trim()))], state, favorite, source };
+    tags: [...new Set(tags.map(tag => tag.trim()))], state: state as Article['state'], favorite, source,
+    notes, annotations: annotations.map(h => ({ id: h.id, quote: h.quote, prefix: h.prefix, suffix: h.suffix, note: h.note, createdAt: h.createdAt })), deleted };
 }
 
 export function parseBackup(source: string): Article[] {
   const data = JSON.parse(source);
-  if (data?.format !== 'local-reader' || ![1, 2].includes(data?.version) || !Array.isArray(data.articles) || data.articles.length > 10_000) {
-    throw new Error('Choose a Local Reader JSON backup (version 1 or 2; up to 10,000 articles).');
+  if (data?.format !== 'local-reader' || ![1, 2, 3].includes(data?.version) || !Array.isArray(data.articles) || data.articles.length > 10_000) {
+    throw new Error('Choose a Local Reader JSON backup (version 1–3; up to 10,000 articles).');
   }
   return data.articles.map(validateArticle);
 }
 
 export function makeBackup(articles: ArticleInput[]): string {
-  return JSON.stringify({ format: 'local-reader', version: 2, exportedAt: new Date().toISOString(), articles }, null, 2);
+  return JSON.stringify({ format: 'local-reader', version: 3, exportedAt: new Date().toISOString(), articles }, null, 2);
 }
