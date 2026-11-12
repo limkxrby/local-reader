@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { listArticles, restoreArticles } from './storage';
+import { importBookmarks, listArticles, restoreArticles } from './storage';
 import { makeBackup, parseBackup, type Article } from './model';
+import { parsePocketCsv, type PocketImport } from './pocket';
 import { sanitizeContent } from './sanitize';
 import './library.css';
+import './pocket.css';
 
 function App() {
   const params = new URLSearchParams(location.search);
@@ -14,6 +16,8 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const upload = useRef<HTMLInputElement>(null);
+  const pocketUpload = useRef<HTMLInputElement>(null);
+  const [pocketPreview, setPocketPreview] = useState<PocketImport | null>(null);
   const active = articles.find(article => article.url === selected);
   const content = useMemo(() => active ? sanitizeContent(active.content, active.url) : '', [active]);
   const filtered = useMemo(() => {
@@ -75,6 +79,28 @@ function App() {
     finally { setBusy(false); if (upload.current) upload.current.value = ''; }
   }
 
+  async function previewPocket(file?: File) {
+    if (!file) return;
+    setBusy(true);
+    try {
+      if (file.size > 10_000_000) throw new Error('Choose a Pocket CSV smaller than 10 MB.');
+      setPocketPreview(parsePocketCsv(await file.text()));
+    } catch (error) { setMessage(error instanceof Error ? error.message : 'Could not read this Pocket CSV.'); }
+    finally { setBusy(false); if (pocketUpload.current) pocketUpload.current.value = ''; }
+  }
+
+  async function importPocket() {
+    if (!pocketPreview) return;
+    setBusy(true);
+    try {
+      const added = await importBookmarks(pocketPreview.articles);
+      await refresh();
+      setPocketPreview(null);
+      setMessage(`Imported ${added} Pocket bookmark${added === 1 ? '' : 's'}. ${pocketPreview.articles.length - added + pocketPreview.skipped} duplicate or invalid row${pocketPreview.articles.length - added + pocketPreview.skipped === 1 ? ' was' : 's were'} skipped.`);
+    } catch { setMessage('Pocket import failed. Your existing library was not changed.'); }
+    finally { setBusy(false); }
+  }
+
   return <div className="shell">
     <header className="topbar">
       <button className="brand" onClick={() => openArticle('')} aria-label="Local Reader library"><span className="mark">lr.</span><span>Local Reader</span></button>
@@ -89,19 +115,30 @@ function App() {
           <small>No account. No tracking.<br />Saved text stays in this browser.</small>
           <button disabled={busy || loading} onClick={() => void exportLibrary()}>Export backup ↗</button>
           <button disabled={busy || loading} onClick={() => upload.current?.click()}>Restore backup</button>
+          <button disabled={busy || loading} onClick={() => pocketUpload.current?.click()}>Import Pocket CSV</button>
           <input ref={upload} className="visually-hidden" type="file" accept=".json,application/json" aria-label="Restore backup file" onChange={event => void restore(event.target.files?.[0])} />
+          <input ref={pocketUpload} className="visually-hidden" type="file" accept=".csv,text/csv" aria-label="Choose Pocket CSV" onChange={event => void previewPocket(event.target.files?.[0])} />
         </div>
       </aside>
       <main>
         {message && <div className="notice" role="status"><span>{message}</span><button aria-label="Dismiss message" onClick={() => setMessage('')}>×</button></div>}
+        {pocketPreview && <div className="dialog-backdrop" role="presentation"><section className="import-dialog" role="dialog" aria-modal="true" aria-labelledby="import-title">
+          <button className="dialog-close" aria-label="Close Pocket import" disabled={busy} onClick={() => setPocketPreview(null)}>×</button>
+          <p className="eyebrow">POCKET CSV IMPORT</p><h2 id="import-title">{pocketPreview.articles.length} bookmark{pocketPreview.articles.length === 1 ? '' : 's'} ready to import.</h2>
+          <p>These entries include links, titles, dates, tags, archived status, and favorites. They are bookmarks, not offline copies; importing them will not visit or download their pages.</p>
+          {pocketPreview.skipped > 0 && <p className="import-warning">{pocketPreview.skipped} invalid or repeated row{pocketPreview.skipped === 1 ? ' was' : 's were'} skipped in the preview.</p>}
+          <ul>{pocketPreview.articles.slice(0, 3).map(item => <li key={item.url}><strong>{item.title}</strong><span>{new URL(item.url).hostname}{item.tags.length ? ` · ${item.tags.join(', ')}` : ''}</span></li>)}</ul>
+          {pocketPreview.articles.length > 3 && <p className="more-preview">Plus {pocketPreview.articles.length - 3} more.</p>}
+          <div className="dialog-actions"><button disabled={busy} onClick={() => setPocketPreview(null)}>Cancel</button><button className="primary" disabled={busy} onClick={() => void importPocket()}>Import bookmarks</button></div>
+        </section></div>}
         {active ? <>
           <button className="back" onClick={() => openArticle('')}>← Back to library</button>
           <article className="reader">
             <p className="eyebrow">{new URL(active.url).hostname} · SAVED FOR OFFLINE READING</p>
             <h1>{active.title}</h1>
-            <p className="byline">{active.byline || 'Saved article'} · {Math.max(1, Math.ceil(active.text.split(/\s+/).length / 220))} min read</p>
-            <div className="reader-content" dangerouslySetInnerHTML={{ __html: content }} />
-            <footer><a href={active.url} target="_blank" rel="noopener noreferrer">Visit original page ↗</a><p>Text-only copy · saved {new Date(active.savedAt).toLocaleDateString()}</p></footer>
+            <p className="byline">{active.byline || (active.source === 'pocket' ? 'Imported Pocket bookmark' : 'Saved article')}{active.text ? ` · ${Math.max(1, Math.ceil(active.text.split(/\s+/).length / 220))} min read` : ''}</p>
+            {active.text ? <div className="reader-content" dangerouslySetInnerHTML={{ __html: content }} /> : <div className="bookmark-empty"><span aria-hidden="true">↗</span><h2>This is a bookmark, not an offline copy.</h2><p>Local Reader kept the link and its Pocket details. Open the original page when you want to read it.</p></div>}
+            <footer><a href={active.url} target="_blank" rel="noopener noreferrer">Visit original page ↗</a><p>{active.source === 'pocket' ? 'Imported from Pocket' : 'Text-only copy'} · saved {new Date(active.savedAt).toLocaleDateString()}</p></footer>
           </article>
         </> : <>
           <div className="library-heading"><div><p className="eyebrow">A LITTLE LESS NOISE</p><h1>Your library<span>.</span></h1><p>Something worth reading. Whenever you're ready.</p></div><span className="count">{articles.length} saved</span></div>
@@ -109,7 +146,7 @@ function App() {
           <div className="list-heading"><span>{query ? 'SEARCH RESULTS' : 'SAVED ARTICLES'}</span><span>NEWEST FIRST</span></div>
           {loading ? <p role="status">Opening your library…</p> : filtered.length ? <div className="article-list">{filtered.map((article, index) => <button className="article-card" key={article.url} onClick={() => openArticle(article.url)}>
             <span className="article-number">{String(index + 1).padStart(2, '0')}</span>
-            <div><p className="source">{new URL(article.url).hostname}</p><h2>{article.title}</h2><p className="excerpt">{article.text.slice(0, 180)}</p><p className="metadata">{Math.max(1, Math.ceil(article.text.split(/\s+/).length / 220))} min read <span>·</span> {new Date(article.savedAt).toLocaleDateString()} <span>·</span> Offline text</p></div><span className="arrow" aria-hidden="true">↗</span>
+            <div><p className="source">{new URL(article.url).hostname}</p><h2>{article.title}</h2><p className="excerpt">{article.text ? article.text.slice(0, 180) : 'Imported link — offline text has not been saved yet.'}</p><p className="metadata">{article.text ? `${Math.max(1, Math.ceil(article.text.split(/\s+/).length / 220))} min read` : 'Bookmark'} <span>·</span> {new Date(article.savedAt).toLocaleDateString()} <span>·</span> {article.text ? 'Offline text' : 'Pocket import'}{article.tags.length ? ` · ${article.tags.slice(0, 3).join(', ')}` : ''}</p></div><span className="arrow" aria-hidden="true">↗</span>
           </button>)}</div> : <div className="empty"><span className="empty-symbol" aria-hidden="true">▤</span><h2>{query ? 'No matching reads' : 'Make room for a good read.'}</h2><p>{query ? 'Try another word from the title or article.' : 'Open an article, then click the Local Reader extension icon to save a clean copy here.'}</p>{!query && <small>Right-click the extension icon → Open your library to return.<br />This first version saves text. Images and video are not included.</small>}</div>}
         </>}
       </main>

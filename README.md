@@ -2,7 +2,7 @@
 
 A local-first read-later browser extension. Save article text to an offline library with no account, backend, analytics, or subscriptions.
 
-**Status: working starter, not a store-ready release.** Chrome/Edge Manifest V3, TypeScript, React, Mozilla Readability, DOMPurify, and IndexedDB. Images, video, PDFs, highlights, and CSV import are not implemented yet.
+**Status: working starter, not a store-ready release.** Chrome/Edge Manifest V3, TypeScript, React, Mozilla Readability, DOMPurify, and IndexedDB. Images, video, PDFs, highlights, and page downloading for imported links are not implemented yet.
 
 ## Start in the cloud
 
@@ -34,6 +34,7 @@ Restricted browser pages, browser stores, PDFs, and some complex sites cannot be
 - URL-based duplicate handling: saving the same URL updates its saved content. Fragments are ignored; query strings are retained.
 - Local library and full-text substring search (all entered words must match).
 - Versioned JSON backup export and atomic restore. Restore skips URLs already present. Files up to 50 MB / 10,000 articles are accepted.
+- Pocket CSV import with a preview, quoted-field support, tags, archived status, and favorites. Repeated, invalid, and already-saved URLs are skipped. Imports create bookmarks only; they do not download or contact the linked pages.
 - Responsive, keyboard-accessible library and reader.
 - Codespaces development configuration and GitHub Actions checks with a downloadable extension build.
 
@@ -41,7 +42,7 @@ Restricted browser pages, browser stores, PDFs, and some complex sites cannot be
 
 Only `activeTab`, `scripting`, and `contextMenus` are requested. There are no persistent host permissions, background crawling, telemetry, remote fonts, or remote code. IndexedDB does not require the `storage` permission. Capturing a page is initiated by the user, and sanitization strips forms, scripts, images, iframes, inline styles, and resource-loading attributes. Extension pages also block network connections and images with a Content Security Policy.
 
-Saved data stays in this browser profile. **Uninstalling the extension or deleting the profile can erase it. Export backups regularly.** Storage quotas and disk availability still apply; local does not mean encrypted at rest. JSON backups contain plaintext article content and URLs. Restore sanitizes content again before saving. The reader sanitizes on display too.
+Saved data stays in this browser profile. **Uninstalling the extension or deleting the profile can erase it. Export backups regularly.** Storage quotas and disk availability still apply; local does not mean encrypted at rest. JSON backups contain plaintext article content and URLs. Restore sanitizes content again before saving. The reader sanitizes on display too. Pocket CSV files are read in the extension and are not uploaded anywhere.
 
 ## Tests
 
@@ -52,11 +53,11 @@ npx playwright install chromium
 npm run test:e2e
 ```
 
-On a fresh Linux environment use `npx playwright install --with-deps chromium`. The browser test uses a disposable extension build with access to one fixture domain so it can invoke capture without automating browser toolbar UI. It verifies real script injection, IndexedDB persistence, duplicate saves, offline reload, search, backup export/restore, and absence of reader network requests. The distributed manifest has no host permissions. Manual toolbar/context-menu testing in Chrome and Edge is still required before release.
+On a fresh Linux environment use `npx playwright install --with-deps chromium`. The browser test verifies IndexedDB persistence, offline reload, search, backup restore, Pocket import preview and commit, duplicate handling, and absence of reader network requests. Unit tests cover extraction, sanitization, backups, CSV parsing, and atomic local writes. The distributed manifest has no host permissions. Manual toolbar/context-menu testing in Chrome and Edge is still required before release.
 
 ## Next milestones
 
-1. Pocket CSV import: map known export columns, preview rows, deduplicate, and distinguish bookmarks from available offline content. Use real export fixtures before promising compatibility.
+1. Download imported pages in an explicit, user-started batch with progress, failures, and retry controls.
 2. Omnivore export adapters, validated against actual export formats.
 3. Highlights, notes, read/archive state, and article management.
 4. Optional image downloads with explicit permissions and storage limits.
