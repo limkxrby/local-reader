@@ -21,15 +21,15 @@ Either build locally with Node.js 24 (`npm ci` then `npm run build`), or downloa
 1. Extract the downloaded build to a folder containing `manifest.json`.
 2. Open `chrome://extensions` or `edge://extensions` and enable Developer mode.
 3. Choose **Load unpacked** and select that folder (or the local `dist` folder).
-4. Pin Local Reader. Open a normal HTTP/HTTPS article and click its toolbar icon once.
-5. The article is saved and opens in the reader. Disconnect from the network and reload to check offline reading.
-6. Right-click the extension icon and select **Open your library** to return without saving another page. The extension's Options entry also opens the library.
+4. Pin Local Reader. Open a normal HTTP/HTTPS article and click its toolbar icon to open the popup.
+5. Choose **Save this page**. The popup confirms the saved offline copy. Choose **Open library** or a recent article to read it. Disconnect from the network and reload to check offline reading.
+6. The extension's Options entry and the icon's **Open your library** context-menu action also open the library.
 
 Restricted browser pages, browser stores, PDFs, and some complex sites cannot be saved. Errors appear in the library. A saved copy includes extracted text and links, not media or the entire original page. Clicking a link intentionally visits the original website.
 
 ## Included
 
-- Toolbar and page context-menu saving with minimal permissions.
+- Toolbar popup with save status, a save button, library access, and three recent articles; page context-menu saving with minimal permissions.
 - Readability extraction, strict HTML sanitization, and text-only offline reading.
 - URL-based duplicate handling: saving the same URL updates its saved content. Fragments are ignored; query strings are retained.
 - Local library and full-text substring search (all entered words must match).

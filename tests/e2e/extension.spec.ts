@@ -48,6 +48,13 @@ test('reads offline, searches, restores a backup, and imports Pocket bookmarks',
     await reader.getByLabel('Restore backup file').setInputFiles({ name: 'seed.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(seed)) });
     await expect(reader.getByRole('status')).toContainText('Restored 1 article');
     await expect(reader.getByText('1 saved', { exact: true })).toBeVisible();
+    const popup = await context.newPage();
+    await popup.goto(`chrome-extension://${id}/popup.html`);
+    await expect(popup.getByRole('heading', { name: 'Recently saved' })).toBeVisible();
+    await expect(popup.getByRole('link', { name: 'A lasting library' })).toBeVisible();
+    await expect(popup.getByRole('button', { name: 'Open library' })).toBeVisible();
+    await expect(popup.getByRole('button', { name: 'Save this page' })).toBeDisabled();
+    await popup.close();
     await reader.getByRole('searchbox').fill('marmalade');
     await expect(reader.getByRole('heading', { name: 'A lasting library', exact: true })).toBeVisible();
     await reader.getByRole('heading', { name: 'A lasting library', exact: true }).click();

@@ -26,7 +26,20 @@ async function saveAndOpen(tab: chrome.tabs.Tab) {
   await chrome.tabs.create({ url: library.href });
 }
 
-chrome.action.onClicked.addListener(tab => { void saveAndOpen(tab); });
+chrome.runtime.onMessage.addListener((message: unknown, sender, sendResponse) => {
+  if (!message || typeof message !== 'object' || !('type' in message) || message.type !== 'capture-active-tab') return;
+  if (sender.id !== chrome.runtime.id) return;
+  void (async () => {
+    try {
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      if (!tab) throw new Error('Open an article in a normal browser tab first.');
+      sendResponse({ url: await captureTab(tab) });
+    } catch (error) {
+      sendResponse({ error: error instanceof Error ? error.message : 'The article could not be saved.' });
+    }
+  })();
+  return true;
+});
 chrome.runtime.onInstalled.addListener(() => {
   chrome.contextMenus.removeAll(() => {
     chrome.contextMenus.create({ id: 'save', title: 'Save article to Local Reader', contexts: ['page'], documentUrlPatterns: ['http://*/*', 'https://*/*'] });

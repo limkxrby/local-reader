@@ -1,4 +1,4 @@
-# Local Reader 1.0.0 — release handoff
+# Local Reader 1.0.1 — release handoff
 
 ## Listing copy
 

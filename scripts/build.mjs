@@ -11,7 +11,7 @@ await cp('public', outdir, { recursive: true });
 const shared = { absWorkingDir: process.cwd(), tsconfig: resolve('tsconfig.json'), bundle: true, target: 'chrome120', sourcemap: false, minify: true, outdir,
   define: { 'process.env.NODE_ENV': '"production"' }, logLevel: 'info' };
 const configs = [
-  { ...shared, entryPoints: { background: resolve('src/background.ts'), library: resolve('src/library.tsx') }, format: 'esm' },
+  { ...shared, entryPoints: { background: resolve('src/background.ts'), library: resolve('src/library.tsx'), popup: resolve('src/popup.ts') }, format: 'esm' },
   { ...shared, entryPoints: { extractor: resolve('src/extractor.ts') }, format: 'iife' },
 ];
 if (process.argv.includes('--watch')) {
