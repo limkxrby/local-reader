@@ -1,19 +1,18 @@
-import { deflateSync } from 'node:zlib';
+import { deflateSync, inflateSync } from 'node:zlib';
 import { mkdir, writeFile, readFile } from 'node:fs/promises';
 
-// Code-drawn book icon: no external artwork or fonts.
+// User-supplied Local Reader mark, embedded to keep release builds reproducible.
+const suppliedIcon = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAADUAAAAzCAYAAAA3v0BtAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAASSSURBVGhD7Zh7TFNXHMc/t7a2COVZWuQxMWwqQ0nwMQVNhhsz6GY0GibZdLCQzWQanewV4tRsji2SsEzNFGcYiwwT3NyMWUSnLjqZGucDjSHOSaYQfEWeYotQ2v3hLPVkw3vLLaOkn6TJvd/fOTf99PT+2nMle7fNyRBDIwZDAb+Ur+CX8hX8Ev5CkNSSvL0D62ts5NjZ37nQPVRLtVdob3jLk6n8ktpNBrMERFMfHoCL83MIHnsOHGIYhRLtXXc5djpU+zYs5s/r/4llvtN2sRJLJm3kJTEJPTDh4tlWSiSut3UxPbvdrL7QJVHqyIXU1g4eVnZvDz7RTSS8jtE9oz7XV2U/VDJnkM/e1UI4E5LM5t3lFH16xGxJAvZUifPn2PXvp+w2+1iyStYO22s3VhMXcM1sfRYZEl1WK1sLi/D4eUVEnE4HFTs3UNXd7dY6hNZUqcu1FBXr/wTU4Pzl2ppuHFdjPtEltTJ8+fczjTodDoCAgIwBgYSYjQSagxEr3UboiJ3Wlqo94ZU/fVG13HCuOnkv/k6xavXUVFUxL5tJVR98T5zkh+ZohpWm5XW9jYx7hNZUlabzXXcabPRoTWTmDCa+JEmjAYtw2RdxTPsPT10K2xOst6Ok94G0XjtNF9uKmTdiQaU3b6eo7Q/yZL6VxxiMHjwXGoQo7rUcL2B1PTZ5L+xgtLC9ewtKaHynRQ00hOseHcDB0u/4kjpRj6ZN4kgcbJKqC4Vmb2Kj3OzeS1zOlMSxxBvDsMcNYuybWtZlBKDOSyE8LAoXpg7j4wkcbY6qC51a+dWPth1mKv3ettIUHgYtT+WU36ltXegJCEN6z1VE9Wl7N2tnL18hZvWXqn2G1Vs2n+U6uO13LI+aM+Xa37jxB9uE1VEdSkAnI+2YUePlfvAxQNbmLX4VZIXLGLJ5v3cvO8+ST28I/U/45fyBhqthfz1Wzn7fSVnvv6UnFgtkjhIIapISWiRJL0Yy2LqK3ksTgpHqwFdaAJLV+UQLw5SiEdSUmgcyREBPOzIOkMk08ZPI9agBa2O0XExWAw61/gQcyrzU55kZKArcuHUgPuuxfnPqz/Ikhrm/vBjchaHSz4jLznCNVmjD2HW3KVUfLiQuKzVVCxbQEJIr5TBksaago/YvjyXFFf6gFPlFXxb24zdAd2tdWz7/Bvct6OSJKFR+H2U9TTpvaJCDh2vFuMBwaDXs+atlcx5dqZY+k9krdT4p8aK0YARagzGYjKJcZ/IkkqfmipGA4bFZCIhbpQY94ksqVHRMSzMnC3GXkcC5j6XQWhwsFjqE1lSALnzsxgTP1qMvcqMyVPInJEuxo9FtlS0JYqVOXlEmy1iySukpkxi7bK3CRwxQiw9Flndz53TFy9QULyBtrvtih+IyMGg1zNlQjIFS5czMtIslmWhWAqgqbWFvb8c5GTNOeqvN9LS3kZXV5dHP5qSJBFgMGAOjyA+No7nU9NIfyaNIA9W6CEeSQH0OBw0t7Zwu7mJjnv3sNvtHkvpdTpCjMFYTJEEB/V/k++x1GBGdqPwJfxSvsKQlPobuNln/GX3nWIAAAAASUVORK5CYII=', 'base64');
+function iconPixels(png) { const w=png.readUInt32BE(16),h=png.readUInt32BE(20),parts=[]; let at=8; while(at<png.length){const n=png.readUInt32BE(at),type=png.subarray(at+4,at+8).toString();if(type==='IDAT')parts.push(png.subarray(at+8,at+8+n));at+=n+12;}const bytes=inflateSync(Buffer.concat(parts)),out=Buffer.alloc(w*h*4);let read=0;for(let y=0;y<h;y++){const filter=bytes[read++],row=out.subarray(y*w*4,(y+1)*w*4),prior=y?out.subarray((y-1)*w*4,y*w*4):null;for(let x=0;x<w*4;x++){const left=x>=4?row[x-4]:0,up=prior?.[x]||0,corner=x>=4?(prior?.[x-4]||0):0,value=bytes[read++];if(filter===0)row[x]=value;else if(filter===1)row[x]=(value+left)&255;else if(filter===2)row[x]=(value+up)&255;else if(filter===3)row[x]=(value+Math.floor((left+up)/2))&255;else {const p=left+up-corner,a=Math.abs(p-left),b=Math.abs(p-up),c=Math.abs(p-corner);row[x]=(value+(a<=b&&a<=c?left:b<=c?up:corner))&255;}}}return{w,h,out}; }
+const source=iconPixels(await readFile('public/icon-source.png'));
 function crc(bytes) { let n=0xffffffff; for(const b of bytes){n^=b;for(let i=0;i<8;i++)n=(n>>>1)^((n&1)?0xedb88320:0);} return (n^0xffffffff)>>>0; }
 function chunk(type, data) { const label=Buffer.from(type); const out=Buffer.alloc(data.length+12);out.writeUInt32BE(data.length);label.copy(out,4);data.copy(out,8);out.writeUInt32BE(crc(Buffer.concat([label,data])),data.length+8);return out; }
 await mkdir('public/icons', {recursive:true});
 for(const size of [16,32,48,128]) {
   const raw=Buffer.alloc((size*4+1)*size);
   for(let y=0;y<size;y++)for(let x=0;x<size;x++) {
-    const X=x/size,Y=y/size; let color=[0,0,0,0];
-    if(X>=.125&&X<.875&&Y>=.125&&Y<.875)color=[45,75,64,255];
-    if(X>=.27&&X<.73&&Y>=.31&&Y<.7)color=[249,247,230,255];
-    if(X>=.48&&X<.52&&Y>=.31&&Y<.75)color=[45,75,64,255];
-    if(X>=.59&&X<.65&&Y>=.29&&Y<.51)color=[190,111,67,255];
-    const at=y*(size*4+1)+1+x*4; for(let c=0;c<4;c++)raw[at+c]=color[c];
+    const sx=Math.min(source.w-1,Math.floor(x*source.w/size)),sy=Math.min(source.h-1,Math.floor(y*source.h/size)),input=(sy*source.w+sx)*4,at=y*(size*4+1)+1+x*4;
+    for(let c=0;c<4;c++)raw[at+c]=source.out[input+c];
   }
   const ihdr=Buffer.alloc(13);ihdr.writeUInt32BE(size);ihdr.writeUInt32BE(size,4);ihdr[8]=8;ihdr[9]=6;
   await writeFile(`public/icons/icon-${size}.png`,Buffer.concat([Buffer.from([137,80,78,71,13,10,26,10]),chunk('IHDR',ihdr),chunk('IDAT',deflateSync(raw)),chunk('IEND',Buffer.alloc(0))]));
