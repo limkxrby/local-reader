@@ -45,7 +45,7 @@ Restricted browser pages, browser stores, PDFs, and some complex sites cannot be
 
 ## Organize and annotate
 
-Open an article to edit tags, favorite it, mark it read/unread, archive it, or move it to Trash. Use the library's Show, Tag and Sort controls to find items. Trash is recoverable and included in backups; this version does not permanently purge individual articles.
+Open an article to edit its title and tags, favorite it, mark it read/unread, archive it, or move it to Trash. Use the library's Show, Tag and Sort controls to find items. Trash is recoverable and included in backups; this version does not permanently purge individual articles.
 
 Select a passage inside the reader and choose **Save selected highlight**. Add notes to that highlight or to the article, then explicitly save. Highlights retain the quote plus surrounding text; if recapture changes the article, unmatched quotes are kept rather than silently attached to a different passage.
 

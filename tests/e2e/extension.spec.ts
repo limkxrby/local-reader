@@ -100,6 +100,10 @@ test('reads offline, searches, restores a backup, and imports Pocket bookmarks',
     await context.setOffline(true);
     await reader.reload();
     await expect(reader.locator('.reader-content')).toContainText('marmalade');
+    await reader.getByLabel('Article title', { exact: true }).fill('Downloaded research, renamed');
+    await reader.getByRole('button', { name: 'Save title', exact: true }).click();
+    await expect(reader.getByRole('button', { name: 'Save title', exact: true })).toBeEnabled();
+    await expect(reader.getByRole('heading', { name: 'Downloaded research, renamed', exact: true })).toBeVisible();
     await reader.getByRole('button', { name: '★ Unfavorite', exact: true }).click();
     await reader.getByRole('button', { name: '☆ Favorite', exact: true }).click();
     await reader.getByRole('button', { name: 'Mark read', exact: true }).click();
@@ -129,7 +133,7 @@ test('reads offline, searches, restores a backup, and imports Pocket bookmarks',
     await reader.getByRole('button', { name: 'Move to trash', exact: true }).click();
     await reader.getByRole('button', { name: 'Back to library' }).click();
     await reader.getByLabel('Show', { exact: true }).selectOption('trash');
-    await reader.getByRole('heading', { name: 'Pocket, research', exact: true }).click();
+    await reader.getByRole('heading', { name: 'Downloaded research, renamed', exact: true }).click();
     await reader.getByRole('button', { name: 'Restore from trash', exact: true }).click();
     await reader.getByRole('button', { name: 'Back to library' }).click();
     await reader.getByLabel('Show', { exact: true }).selectOption('all');

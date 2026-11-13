@@ -11,6 +11,7 @@ function HighlightNote({ highlight, save, remove, matched }: { highlight: Annota
 
 export function Reader({ article, refresh, message }: { article: Article; refresh: () => Promise<void>; message: (text: string) => void }) {
   const root = useRef<HTMLDivElement>(null);
+  const [title, setTitle] = useState(article.title);
   const [tags, setTags] = useState(article.tags.join(', '));
   const [notes, setNotes] = useState(article.notes);
   const [selection, setSelection] = useState<ReturnType<typeof captureSelection>>(null);
@@ -24,6 +25,11 @@ export function Reader({ article, refresh, message }: { article: Article; refres
     finally { setSaving(false); }
   }
   useEffect(() => {
+    setTitle(article.title);
+    setTags(article.tags.join(', '));
+    setNotes(article.notes);
+  }, [article.url, article.title, article.tags, article.notes]);
+  useEffect(() => {
     if (!root.current) return;
     root.current.innerHTML = sanitizeContent(article.content, article.url);
     setMatched(renderHighlights(root.current, article.annotations));
@@ -35,6 +41,7 @@ export function Reader({ article, refresh, message }: { article: Article; refres
       <button onClick={() => void change(a => ({ ...a, state: a.state === 'archived' ? 'unread' : 'archived' }))}>{article.state === 'archived' ? 'Unarchive' : 'Archive'}</button>
       <button onClick={() => void change(a => ({ ...a, deleted: !a.deleted }))}>{article.deleted ? 'Restore from trash' : 'Move to trash'}</button>
     </div>
+    <form className="tag-editor title-editor" onSubmit={e => { e.preventDefault(); const clean = title.trim(); if (clean) void change(a => ({ ...a, title: clean })); }}><label>Title<input aria-label="Article title" value={title} onChange={e => setTitle(e.target.value)} maxLength={500} required /></label><button>Save title</button></form>
     <form className="tag-editor" onSubmit={e => { e.preventDefault(); void change(a => ({ ...a, tags: tags.split(',').map(s => s.trim()).filter(Boolean) })); }}><label>Tags, separated by commas<input value={tags} onChange={e => setTags(e.target.value)} maxLength={5000} /></label><button>Save tags</button></form>
     {article.text ? <>
       <p className="reader-hint">Select text in the article, then save a highlight. Keyboard selection works too.</p>
