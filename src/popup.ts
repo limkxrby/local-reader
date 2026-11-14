@@ -1,11 +1,20 @@
 import { normalizeUrl } from './model';
 import { listArticles } from './storage';
+import type { Article } from './model';
 
 const status = document.querySelector<HTMLParagraphElement>('#status')!;
 const save = document.querySelector<HTMLButtonElement>('#save')!;
 const recent = document.querySelector<HTMLDivElement>('#recent')!;
 const libraryUrl = chrome.runtime.getURL('library.html');
 let currentUrl = '';
+
+function recentTitle(article: Article) {
+  const hostname = new URL(article.url).hostname.replace(/^www\./, '').toLocaleLowerCase();
+  if (article.title.trim().toLocaleLowerCase() !== hostname) return article.title;
+  const template = document.createElement('template');
+  template.innerHTML = article.content;
+  return template.content.querySelector('h1')?.textContent?.replace(/\s+/g, ' ').trim() || article.title;
+}
 
 function openLibrary(article?: string) {
   const url = new URL(libraryUrl);
@@ -22,8 +31,12 @@ async function refresh() {
   for (const article of articles.slice(0, 3)) {
     const link = document.createElement('a');
     link.href = `${libraryUrl}?article=${encodeURIComponent(article.url)}`;
-    link.textContent = article.title;
-    link.title = article.title;
+    const title = recentTitle(article);
+    link.textContent = title;
+    link.title = title;
+    const domain = document.createElement('small');
+    domain.textContent = new URL(article.url).hostname.replace(/^www\./, '');
+    link.append(domain);
     link.addEventListener('click', event => { event.preventDefault(); openLibrary(article.url); });
     recent.append(link);
   }

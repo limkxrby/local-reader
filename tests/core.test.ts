@@ -17,6 +17,10 @@ describe('privacy and extraction', () => {
     expect(result.url).toBe('https://example.com/story');
     expect(page.querySelector('form')).not.toBeNull();
   });
+  it('prefers an article headline over a website-name page title', () => {
+    const page = new DOMParser().parseFromString(`<html><head><title>Example.com</title><meta property="og:site_name" content="Example.com"></head><body><article><h1>Research methods that hold up</h1>${Array.from({ length: 5 }, () => `<p>${paragraph}</p>`).join('')}</article></body></html>`, 'text/html');
+    expect(extractArticle(page, 'https://example.com/research').title).toBe('Research methods that hold up');
+  });
   it('strips resource loads, handlers, CSS and dangerous links', () => {
     const html = sanitizeContent('<p style="background:url(https://evil.test)">Hi</p><svg onload="alert(1)"></svg><iframe src="https://evil.test"></iframe><img src="x" onerror="alert(1)"><a href="javascript:alert(1)" ping="https://evil.test">bad</a><a href="/next">safe</a>', article.url);
     expect(html).not.toMatch(/<svg|<iframe|<img|onerror|onload|style=|ping=|javascript:/);
