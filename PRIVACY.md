@@ -1,6 +1,6 @@
 # Local Reader privacy policy
 
-Applies to version 1.0.3.
+Applies to version 1.0.4.
 
 Local Reader stores article text, URLs, titles, dates, tags, reading state, notes, highlights and trash inside your browser profile using IndexedDB. No account is required. There is no analytics, advertising, telemetry, cloud database, or sync service.
 
